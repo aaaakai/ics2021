@@ -1,4 +1,4 @@
-STUID = 201220000
+STUID = 20122000
 STUNAME = 张三
 
 # DO NOT modify the following code!!!
