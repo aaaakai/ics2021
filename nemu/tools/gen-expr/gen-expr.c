@@ -16,8 +16,40 @@ static char *code_format =
 "  return 0; "
 "}";
 
+static int position;
+
+static void gen_num() {
+	char num[8];
+	sprintf(num, "%d", rand() % 100);
+	strcpy(buf + position, num);
+	position += strlen(num);  
+}
+
+static void gen(char paren) {
+	buf[position] = paren;
+	position += 1;
+}
+
+int choose(int n) {return rand() % n;}
+
+static void gen_rand_op() {
+	switch (choose(4)) {
+		case 0: gen('+'); break;
+		case 1: gen('-'); break;
+		case 2: gen('*'); break;
+		default: gen('/'); break;
+	}
+}
+
+
 static void gen_rand_expr() {
-  buf[0] = '\0';
+  // buf[0] = '\0';
+  
+  switch (choose(3)) {
+    case 0: gen_num(); break;
+    case 1: gen('('); gen_rand_expr(); gen(')'); break;
+    default: gen_rand_expr(); gen_rand_op(); gen_rand_expr(); break;
+  }
 }
 
 int main(int argc, char *argv[]) {
@@ -29,6 +61,8 @@ int main(int argc, char *argv[]) {
   }
   int i;
   for (i = 0; i < loop; i ++) {
+   	memset(buf, 0, 65536);
+  	position = 0;
     gen_rand_expr();
 
     sprintf(code_buf, code_format, buf);
