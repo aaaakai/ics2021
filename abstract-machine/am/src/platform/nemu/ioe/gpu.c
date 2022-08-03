@@ -1,20 +1,35 @@
 #include <am.h>
 #include <nemu.h>
 
+#include "../../../riscv/riscv.h"
+
 #define SYNC_ADDR (VGACTL_ADDR + 4)
 
 void __am_gpu_init() {
 }
 
 void __am_gpu_config(AM_GPU_CONFIG_T *cfg) {
+	uint16_t screen_hight = inw(VGACTL_ADDR);
+	uint16_t screen_width = inw(VGACTL_ADDR + 2);
   *cfg = (AM_GPU_CONFIG_T) {
     .present = true, .has_accel = false,
-    .width = 0, .height = 0,
+    .width = screen_width, .height = screen_hight,
     .vmemsz = 0
   };
 }
 
 void __am_gpu_fbdraw(AM_GPU_FBDRAW_T *ctl) {
+	int win_width = io_read(AM_GPU_CONFIG).width;
+	
+	uintptr_t fb = FB_ADDR;
+	uint32_t *pi = (uint32_t *)(ctl->pixels);
+	int block_width = ctl->w;
+	int block_height = ctl->h;
+	for (int y_index = 0; y_index < block_height; y_index ++) {
+		for (int x_index = 0; x_index < block_width; x_index ++) {
+			outl(fb + (win_width * ctl->y + win_width * y_index + ctl->x + x_index) * 4, pi[y_index * block_width + x_index]);
+		}
+	}
   if (ctl->sync) {
     outl(SYNC_ADDR, 1);
   }
