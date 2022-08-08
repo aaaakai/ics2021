@@ -18,19 +18,55 @@ static bool g_print_step = false;
 const rtlreg_t rzero = 0;
 rtlreg_t tmp_reg[4];
 
+CSR_state csr = {.mstatus.value = 0x1800};	//1800
+
 void device_update();
 void fetch_decode(Decode *s, vaddr_t pc);
 bool scan_wp();
 
+#ifdef CONFIG_ITRACE_COND
+
+#define RINGBUF_LINES 128
+#define RINGBUF_LENGTH 128
+char instr_ringbuf[RINGBUF_LINES][RINGBUF_LENGTH];
+long ringbuf_end = 0;
+#define RINGBUF_ELEMENT(index) (instr_ringbuf[index % RINGBUF_LINES])
+
+#endif
+
 static void trace_and_difftest(Decode *_this, vaddr_t dnpc) {
 #ifdef CONFIG_ITRACE_COND
   if (ITRACE_COND) log_write("%s\n", _this->logbuf);
+  
+  strncpy(RINGBUF_ELEMENT(ringbuf_end), _this->logbuf, RINGBUF_LINES);
+  ringbuf_end ++;
+  
 #endif
   if (g_print_step) { IFDEF(CONFIG_ITRACE, puts(_this->logbuf)); }
   IFDEF(CONFIG_DIFFTEST, difftest_step(_this->pc, dnpc));
   if (scan_wp()) {
   	nemu_state.state = NEMU_STOP;
   }
+}
+
+#ifdef CONFIG_ITRACE_COND
+static char last_instr[RINGBUF_LENGTH];
+#endif
+
+static void print_instr_ringbuf(int state) {
+	#ifdef CONFIG_ITRACE_COND
+	if (state){
+		strncpy(RINGBUF_ELEMENT(ringbuf_end), last_instr, RINGBUF_LENGTH);
+		ringbuf_end ++;
+	}
+	
+	printf(ASNI_FMT("====== The nearest %d instrs ======\n", ASNI_FG_RED), RINGBUF_LINES);
+	int ringbuf_printend = ringbuf_end + (ringbuf_end >= RINGBUF_LINES ? RINGBUF_LINES : 0);
+	for (int i = ringbuf_end >= RINGBUF_LINES ? ringbuf_end : 0; 
+		i < ringbuf_printend; i ++) {
+		printf(ASNI_FMT("%s\n", ASNI_FG_WHITE), RINGBUF_ELEMENT(i));
+	} 
+	#endif
 }
 
 #include <isa-exec.h>
@@ -53,6 +89,7 @@ static void statistic() {
   Log("total guest instructions = " NUMBERIC_FMT, g_nr_guest_instr);
   if (g_timer > 0) Log("simulation frequency = " NUMBERIC_FMT " instr/s", g_nr_guest_instr * 1000000 / g_timer);
   else Log("Finish running in less than 1 us and can not calculate the simulation frequency");
+  print_instr_ringbuf(10001);
 }
 
 void assert_fail_msg() {
@@ -121,6 +158,9 @@ void cpu_exec(uint64_t n) {
            (nemu_state.halt_ret == 0 ? ASNI_FMT("HIT GOOD TRAP", ASNI_FG_GREEN) :
             ASNI_FMT("HIT BAD TRAP", ASNI_FG_RED))),
           nemu_state.halt_pc);
+      if (nemu_state.halt_ret == 10001) {
+      	print_instr_ringbuf(10001);
+      }
       // fall through
     case NEMU_QUIT: statistic();
   }

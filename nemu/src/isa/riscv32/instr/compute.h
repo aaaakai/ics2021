@@ -127,6 +127,7 @@ def_EHelper(jalr) {
 	rtl_li(s, s0, id_src2->imm);
 	rtl_sext(s, s0, s0, 12);
 	rtl_add(s, s0, s0, dsrc1);
+	rtl_andi(s, s0, s0, ~1);
 	rtl_jr(s, s0);
 }
 
@@ -186,3 +187,5 @@ def_EHelper(bgeu) {
 	rtl_addi(s, s0, s0, id_dest->imm);
 	rtl_jrelop(s, RELOP_GEU, dsrc1, dsrc2, *s0);
 }
+
+

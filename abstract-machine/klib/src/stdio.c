@@ -5,6 +5,8 @@
 
 #if !defined(__ISA_NATIVE__) || defined(__NATIVE_USE_KLIB__)
 
+#define print_max_char 16777216
+
 char* itoa(int num,char* str,int radix)
 {
     char index[]="0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -38,26 +40,24 @@ char* itoa(int num,char* str,int radix)
  
 }
 int printf(const char *fmt, ...) {
-  char buf[255];
+  char buf[2048];//8196
   va_list args;
 	va_start(args, fmt);
 	int result = vsprintf(buf, fmt, args);
 	va_end(args);
-	for (char *p = buf; *p; p++) {
-		putch(*p);
-	}
+	putstr(buf);
 	return result;
 }
 
 int vsprintf(char *out, const char *fmt, va_list ap) {
-  int result = vsnprintf(out, 2147483647, fmt, ap);
+  int result = vsnprintf(out, print_max_char, fmt, ap);
   return result;
 }
 
 int sprintf(char *out, const char *fmt, ...) {
 	va_list args;
 	va_start(args, fmt);
-	int result = vsnprintf(out, 2147483647, fmt, args);
+	int result = vsnprintf(out, print_max_char, fmt, args);
 	va_end(args);
 	return result;
 }
@@ -110,6 +110,25 @@ int vsnprintf(char *out, size_t max_len, const char *fmt, va_list ap) {
 				char num_str[32];
 				//sprintf(num_str, "%d", n);
 				itoa(n, num_str, 10);
+				int num_str_len = strlen(num_str);
+				if (num_len != 0) {
+					if (num_str_len < width) {
+						memset(str, ' ', width - num_str_len);
+						str += width - num_str_len;
+					}
+				}
+				strcpy(str, num_str);
+				str += num_str_len;
+				break;
+			}
+			case 'c' : {
+				int character = va_arg(ap, int);
+				*(str++) = character;
+			}
+			case 'p' : {
+				uint32_t pointer = va_arg(ap, uint32_t);
+				char num_str[32];
+				itoa(pointer, num_str, 16);
 				int num_str_len = strlen(num_str);
 				if (num_len != 0) {
 					if (num_str_len < width) {
