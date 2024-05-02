@@ -140,6 +140,21 @@ int vsnprintf(char *out, size_t max_len, const char *fmt, va_list ap) {
 				str += num_str_len;
 				break;
 			}
+			case 'x' : {
+				uint32_t pointer = va_arg(ap, uint32_t);
+				char num_str[32];
+				itoa(pointer, num_str, 16);
+				int num_str_len = strlen(num_str);
+				if (num_len != 0) {
+					if (num_str_len < width) {
+						memset(str, ' ', width - num_str_len);
+						str += width - num_str_len;
+					}
+				}
+				strcpy(str, num_str);
+				str += num_str_len;
+				break;
+			}
 			default : {
 				printf("%c\n", *(--fmt));
 				break;

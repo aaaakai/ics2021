@@ -123,12 +123,13 @@ def_EHelper(jal) {
 // my jalr
 def_EHelper(jalr) {
 	rtl_li(s, s0, s->pc);
-	rtl_addi(s, ddest, s0, 4);
-	rtl_li(s, s0, id_src2->imm);
-	rtl_sext(s, s0, s0, 12);
-	rtl_add(s, s0, s0, dsrc1);
-	rtl_andi(s, s0, s0, ~1);
-	rtl_jr(s, s0);
+	rtl_addi(s, s0, s0, 4);
+	rtl_li(s, s1, id_src2->imm);
+	rtl_sext(s, s1, s1, 12);
+	rtl_add(s, s1, s1, dsrc1);
+	rtl_andi(s, s1, s1, ~1);
+	rtl_jr(s, s1);
+	rtl_mv(s, ddest, s0);
 }
 
 // my add_sub_mul

@@ -12,10 +12,14 @@ def_EHelper(nemu_trap) {
 
 rtlreg_t* decode_csr_no(int csr_no){
 	switch (csr_no) {
+		case 0x180:
+			return &(csr.satp);
 		case 0x300:
 			return &(csr.mstatus.value);
 		case 0x305:
 			return &(csr.mtvec);
+		case 0x340:
+			return &(csr.mscratch);
 		case 0x341:
 			return &(csr.mepc);
 		case 0x342:
@@ -43,8 +47,8 @@ def_EHelper(ecall_ebreak) {
 		}
 		case 0b001100000010 :{	// mret
 			rtl_j(s, csr.mepc);
-			//csr.mstatus.m.MIE = csr.mstatus.m.MPIE;
-			//csr.mstatus.m.MPIE = 1;
+			csr.mstatus.m.MIE = csr.mstatus.m.MPIE;
+			csr.mstatus.m.MPIE = 1;
 			break;
 		}
 		default :{

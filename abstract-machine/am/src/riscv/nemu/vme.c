@@ -66,9 +66,47 @@ void __am_switch(Context *c) {
   }
 }
 
+#define VA_VPN_0(x) (((uintptr_t)x & 0x003FF000u) >> 12)
+#define VA_VPN_1(x) (((uintptr_t)x & 0xFFC00000u) >> 22)
+#define VA_OFFSET(x) ((uintptr_t)x & 0x00000FFFu)
+
+#define PTE_PPN_MASK (0xFFFFFC00u)
+#define PTE_PPN(x) (((uintptr_t)x & PTE_PPN_MASK) >> 10)
+
 void map(AddrSpace *as, void *va, void *pa, int prot) {
+	assert(((uintptr_t)va & 0xfff) == 0);
+	assert(((uintptr_t)pa & 0xfff) == 0);
+	
+	va = (void *)(((uintptr_t)va) & (~0xfff));
+  pa = (void *)(((uintptr_t)pa) & (~0xfff));
+
+  PTE *page_table_entry = as->ptr + VA_VPN_1(va) * sizeof(PTE);
+  
+  if (!(*page_table_entry & PTE_V)){
+  	void *alloced_page = pgalloc_usr(PGSIZE);
+    *page_table_entry = (*page_table_entry & ~PTE_PPN_MASK) | 
+    	(PTE_PPN_MASK & ((uintptr_t)alloced_page >> 2));
+    *page_table_entry = (*page_table_entry | PTE_V);
+	}
+	
+	PTE *leaf_page_table_entry = 
+		(PTE *)(PTE_PPN(*page_table_entry) * 4096 + VA_VPN_0(va) * 4);
+	if ((uintptr_t)va <= 0x41000000){
+     //printf("设置二级表项\t虚拟地址:%p\t实际地址:%p\t表项:%p\n", va, pa, leaf_page_table_entry);
+   }
+	
+	*leaf_page_table_entry = 
+		(PTE_PPN_MASK & ((uintptr_t)pa >> 2)) | 
+		(PTE_V | PTE_R | PTE_W | PTE_X) | (prot ? PTE_U : 0);
 }
 
 Context *ucontext(AddrSpace *as, Area kstack, void *entry) {
-  return NULL;
+  Context *context = kstack.end - sizeof(Context);
+  context->mstatus = 0x1800 | 0x80;
+  context->mepc    = (uintptr_t)entry;
+  context->pdir		 = as->ptr;
+  
+  context->np      = 0;
+  
+  return context;
 }
